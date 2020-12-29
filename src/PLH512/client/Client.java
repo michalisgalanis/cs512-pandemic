@@ -83,7 +83,7 @@ public class Client
                         	
                         	String myCurrentCity = myBoard.getPawnsLocations(myPlayerID);
                         	City myCurrentCityObj = myBoard.searchForCity(myCurrentCity);
-                        	
+							
                         	ArrayList<String> myHand = myBoard.getHandOf(myPlayerID);
                         	
                         	int[] myColorCount = {0, 0, 0, 0};
@@ -114,7 +114,11 @@ public class Client
                         	//printDistanceMap(distanceMap);
                         	
                         	// ADD YOUR CODE FROM HERE AND ON!! 
-                        	
+							
+							//MCST mcst = new MCST();
+
+							//mcst.findNextMove(board, playerNo)
+
                         	boolean tryToCure = false;
                         	String colorToCure = null;
                         	
