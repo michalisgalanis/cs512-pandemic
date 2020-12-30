@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit;
 import PLH512.server.Board;
 import PLH512.server.City;
 
-public class Client  
+public class ClientDummyBackup  
 {
     final static int ServerPort = 64240;
     final static String username = "myName";
