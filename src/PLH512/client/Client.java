@@ -900,38 +900,18 @@ public class Client
 		}
 
 		void expandNode(Node node) {
+			// Create all child states
 			List<State> possibleStates = node.state.getAllPossibleStates();
+			// Create node for each state and make connection with parent
 			for (int i = 0; i < possibleStates.size(); i++){
 				State state = possibleStates.get(i);
 				Node newNode = new Node();
 				newNode.state = state;
 				newNode.parent = node;
-	
-				newNode.state.numberOfActions = node.state.numberOfActions + 1;
-				
 				node.childArray.add(newNode);
-				Board myBoard = newNode.state.board;
 	
-				if (myBoard.checkIfWon()) break;
-				
-				if(node.state.numberOfActions == 4){
-					newNode.state.numberOfActions = 0;
-					if (newNode.state.playerPlaying == numberOfPlayers - 1) 
-						newNode.state.playerPlaying = 0;
-					else 
-						newNode.state.playerPlaying = newNode.state.playerPlaying + 1;
-				}
-				else{
-					newNode.state.numberOfActions = node.state.numberOfActions++;
-					newNode.state.playerPlaying  = newNode.state.playerPlaying;
-				}
-					
-				if (myBoard.getWhoIsPlaying() == numberOfPlayers - 1) 
-					// Back to first player
-					myBoard.setWhoIsPlaying(0);
-				else 
-					myBoard.setWhoIsPlaying(myBoard.getWhoIsPlaying() + 1);
-					
+				// if (myBoard.checkIfWon()) break;
+
 				// myBoard.drawCards(myBoard.getWhoIsPlaying(), 2);
 				// System.out.println("");
 				
