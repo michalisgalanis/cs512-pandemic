@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
+import PLH512.client.Client.MCST.State;
 import PLH512.server.Board;
 import PLH512.server.City;
 
@@ -114,8 +115,13 @@ public class Client
                         	// ADD YOUR CODE FROM HERE AND ON!! 
 							
 							MCST mcst = new MCST(myBoard);
-							for (int i = 0; i < 4; i++)
-								myAction = myAction + mcst.findNextMove(myBoard);
+							State stateMove;
+							for (int i = 0; i < 4; i++){
+								stateMove = mcst.findNextMove(myBoard, i);
+								myAction = myAction + stateMove.getMyAction();
+								myBoard = stateMove.getBoard();
+								myBoard.setWhoIsPlaying(stateMove.playerPlaying);
+							}
 
                         	// UP TO HERE!! DON'T FORGET TO EDIT THE "msgToSend"
                         	
@@ -523,6 +529,22 @@ public class Client
 				board = new Board(numberOfPlayers);
 			}
 
+			public Board getBoard() {
+				return board;
+			}
+
+			public void setBoard(Board board) {
+				this.board = board;
+			}
+
+			public String getMyAction() {
+				return myAction;
+			}
+
+			public void setMyAction(String myAction) {
+				this.myAction = myAction;
+			}
+
 			// Other Methods
 			List<State> getAllPossibleStates() {
 				// constructs a list of all possible states from current state
@@ -535,10 +557,6 @@ public class Client
 				City myCurrentCityObj = board.searchForCity(myCurrentCity);
 				int[] myColorCount = {0, 0, 0, 0};
 				for (int i = 0 ; i < 4 ; i++) myColorCount[i] =  cardsCounterOfColor(board, playerPlaying, board.getColors(i));
-
-				// Discover a Cure
-				cards_needed_for_cure = (board.getRoleOf(playerPlaying).equals("Scientist")) ? 3 : 4;
-				String colorToCure = null;
 				int childsnumberOfActions = numberOfActions;
 				int childsPlayerPlaying = playerPlaying;
 				if(numberOfActions == 4) {
@@ -553,6 +571,10 @@ public class Client
 					childsnumberOfActions++;
 				}
 
+				// Discover a Cure
+				cards_needed_for_cure = (board.getRoleOf(playerPlaying).equals("Scientist")) ? 3 : 4;
+				String colorToCure = null;
+			
 				for (int i = 0; i < myColorCount.length; i++){
 					if (myColorCount[i] > cards_needed_for_cure){
 						if (i == 0) colorToCure = "Black";
@@ -560,9 +582,10 @@ public class Client
 						else if (i == 2) colorToCure = "Blue";
 						else if (i == 3) colorToCure = "Red";
 						myBoard = copyBoard(board);
-						myBoard.cureDisease(playerPlaying, colorToCure);
+						myBoard.cureDisease(childsPlayerPlaying, colorToCure);
 						myState = new State();
 						myState.board = myBoard;
+						myState.myAction =  toTextCureDisease(childsPlayerPlaying, colorToCure);
 						myState.numberOfActions = childsnumberOfActions;
 						myState.playerPlaying = childsPlayerPlaying;
 						possibleStates.add(myState);
@@ -574,10 +597,10 @@ public class Client
 				if (myCurrentCityObj.getBlackCubes() > 0){
 					colorToTreat = "Black";
 					myBoard = copyBoard(board);
-					myBoard.treatDisease(playerPlaying, myCurrentCity, colorToTreat);
+					myBoard.treatDisease(childsPlayerPlaying, myCurrentCity, colorToTreat);
 					myState = new State();
 					myState.board = myBoard;
-					myState.myAction =  toTextTreatDisease(playerPlaying, myCurrentCity, colorToTreat);
+					myState.myAction =  toTextTreatDisease(childsPlayerPlaying, myCurrentCity, colorToTreat);
 					myState.numberOfActions = childsnumberOfActions;
 					myState.playerPlaying = childsPlayerPlaying;
 					possibleStates.add(myState);
@@ -586,10 +609,10 @@ public class Client
 				if ( myCurrentCityObj.getYellowCubes() > 0){
 					colorToTreat = "Yellow";
 					myBoard = copyBoard(board);
-					myBoard.treatDisease(playerPlaying, myCurrentCity, colorToTreat);
+					myBoard.treatDisease(childsPlayerPlaying, myCurrentCity, colorToTreat);
 					myState = new State();
 					myState.board = myBoard;
-					myState.myAction = toTextTreatDisease(playerPlaying, myCurrentCity, colorToTreat);
+					myState.myAction = toTextTreatDisease(childsPlayerPlaying, myCurrentCity, colorToTreat);
 					myState.numberOfActions = childsnumberOfActions;
 					myState.playerPlaying = childsPlayerPlaying;
 					possibleStates.add(myState);
@@ -598,10 +621,10 @@ public class Client
 				if (myCurrentCityObj.getBlueCubes() > 0){
 					colorToTreat = "Blue";
 					myBoard = copyBoard(board);
-					myBoard.treatDisease(playerPlaying, myCurrentCity, colorToTreat);
+					myBoard.treatDisease(childsPlayerPlaying, myCurrentCity, colorToTreat);
 					myState = new State();
 					myState.board = myBoard;
-					myState.myAction = toTextTreatDisease(playerPlaying, myCurrentCity, colorToTreat);
+					myState.myAction = toTextTreatDisease(childsPlayerPlaying, myCurrentCity, colorToTreat);
 					myState.numberOfActions = childsnumberOfActions;
 					myState.playerPlaying = childsPlayerPlaying;
 					possibleStates.add(myState);
@@ -610,10 +633,10 @@ public class Client
 				if (myCurrentCityObj.getRedCubes() > 0){
 					colorToTreat = "Red";
 					myBoard = copyBoard(board);
-					myBoard.treatDisease(playerPlaying, myCurrentCity, colorToTreat);
+					myBoard.treatDisease(childsPlayerPlaying, myCurrentCity, colorToTreat);
 					myState = new State();
 					myState.board = myBoard;
-					myState.myAction = toTextTreatDisease(playerPlaying, myCurrentCity, colorToTreat);
+					myState.myAction = toTextTreatDisease(childsPlayerPlaying, myCurrentCity, colorToTreat);
 					myState.numberOfActions = childsnumberOfActions;
 					myState.playerPlaying = childsPlayerPlaying;
 					possibleStates.add(myState);
@@ -623,10 +646,10 @@ public class Client
 				for (int i = 0; i < myCurrentCityObj.getNeighboursNumber(); i++){
 					String neighboor = myCurrentCityObj.getNeighbour(i);
 					myBoard = copyBoard(board);
-					myBoard.driveTo(playerPlaying, neighboor);
+					myBoard.driveTo(childsPlayerPlaying, neighboor);
 					myState = new State();
 					myState.board = myBoard;
-					myState.myAction = toTextDriveTo(playerPlaying, neighboor);
+					myState.myAction = toTextDriveTo(childsPlayerPlaying, neighboor);
 					myState.numberOfActions = childsnumberOfActions;
 					myState.playerPlaying = childsPlayerPlaying;
 					possibleStates.add(myState);
@@ -636,10 +659,10 @@ public class Client
 				ArrayList<String> cards = board.getHandOf(playerPlaying);
 				for (int i = 0; i < cards.size(); i++){
 					myBoard = copyBoard(board);
-					myBoard.directFlight(playerPlaying, cards.get(i));
+					myBoard.directFlight(childsPlayerPlaying, cards.get(i));
 					myState = new State();
 					myState.board = myBoard;
-					myState.myAction = toTextDirectFlight(playerPlaying, cards.get(i));
+					myState.myAction = toTextDirectFlight(childsPlayerPlaying, cards.get(i));
 					myState.numberOfActions = childsnumberOfActions;
 					myState.playerPlaying = childsPlayerPlaying;
 					possibleStates.add(myState);
@@ -653,10 +676,10 @@ public class Client
 							location = board.searchForCity(j).getName();
 							if (location.equals(myCurrentCity)) continue;
 							myBoard = copyBoard(board);
-							myBoard.charterFlight(playerPlaying, location);
+							myBoard.charterFlight(childsPlayerPlaying, location);
 							myState = new State();
 							myState.board = myBoard;
-							myState.myAction = toTextCharterFlight(playerPlaying, location);
+							myState.myAction = toTextCharterFlight(childsPlayerPlaying, location);
 							myState.numberOfActions = childsnumberOfActions;
 							myState.playerPlaying = childsPlayerPlaying;
 							possibleStates.add(myState);
@@ -671,10 +694,10 @@ public class Client
 						if(myCurrentCity.equals(locations.get(i)))
 							continue;
 						myBoard = copyBoard(board);
-						myBoard.shuttleFlight(playerPlaying, locations.get(i));
+						myBoard.shuttleFlight(childsPlayerPlaying, locations.get(i));
 						myState = new State();
 						myState.board = myBoard;
-						myState.myAction = toTextShuttleFlight(playerPlaying, locations.get(i));
+						myState.myAction = toTextShuttleFlight(childsPlayerPlaying, locations.get(i));
 						myState.numberOfActions = childsnumberOfActions;
 						myState.playerPlaying = childsPlayerPlaying;
 						possibleStates.add(myState);
@@ -685,10 +708,10 @@ public class Client
 				for (int i = 0; i < cards.size(); i++){
 					if (myCurrentCity.equals(cards.get(i))){
 						myBoard = copyBoard(board);
-						myBoard.buildRS(playerPlaying, myCurrentCity);
+						myBoard.buildRS(childsPlayerPlaying, myCurrentCity);
 						myState = new State();
 						myState.board = myBoard;
-						myState.myAction = toTextBuildRS(playerPlaying, myCurrentCity);
+						myState.myAction = toTextBuildRS(childsPlayerPlaying, myCurrentCity);
 						myState.numberOfActions = childsnumberOfActions;
 						myState.playerPlaying = childsPlayerPlaying;
 						possibleStates.add(myState);
@@ -698,8 +721,20 @@ public class Client
 			}
 			
 			public double heuristic(){
-				return 0.5 * hdsurv() + 0.5 * hdcure() + 1 * hcards() * 0.5 * hdisc() + 0.6 * hinf() + 0.6 * hdist() + 24 * hcures();
+				double weighted_hdsurv = 0.5 * hdsurv();
+				double weighted_hdcure =  0.5 * hdcure();
+				double weighted_hcards = 1 * hcards();
+				double weighted_hdisc = 0.5 * hdisc();
+				double weighted_hinf = 0.6 * hinf();
+				double weighted_hdist = 0.6 * hdist();
+				double weighted_hcures = 24 * hcures();
+				double weighted_htotal =  weighted_hdsurv + weighted_hdcure + weighted_hcards + weighted_hdisc + weighted_hinf + weighted_hdist + weighted_hcures;
+				return weighted_htotal;	
 			}
+			
+			// public double heuristic(){
+			// 	return 0.5 * hdsurv() + 0.5 * hdcure() + 1 * hcards() * 0.5 * hdisc() + 0.6 * hinf() + 0.6 * hdist() + 24 * hcures();
+			// }
 	
 			/**
 			 *  1.  Measures the distance to all the cities times the number of disease cubes (infection) present
@@ -745,7 +780,7 @@ public class Client
 				int colorSize = 4;
 				int sumCards = 0;
 				for(int i = 0; i < colorSize; i++){
-					int active = board.getCured(i) ? 1 : 0; // active cures
+					int active = board.getCured(i) ? 0 : 1 ; // active cures
 					
 					ArrayList<String> cards;
 					for (int j = 0; j < numberOfPlayers; j++){
@@ -798,15 +833,15 @@ public class Client
 			 * 		(taken from the amount of cards still remaining in the player deck).
 			 */
 			public double hdist(){
-				double sum = 0;
+				float sum = 0;
 				for(int i = 0; i < board.getCitiesCount(); i++){
 					ArrayList<citiesWithDistancesObj> currentMap = new ArrayList<>();
 					currentMap = buildDistanceMap(board, board.searchForCity(i).getName(), currentMap);
 					for(int j = 0; j < currentMap.size(); j++){
-						sum += ((currentMap.get(j).getDistance() / ((board.getCitiesCount() - 1) * board.getCitiesCount())) * board.getPlayersDeck().size()) / (board.getCitiesCount() + board.getNumberOfEpidemicCards());	
+						sum += (float) (currentMap.get(j).getDistance() * board.getPlayersDeck().size()) / (float) (board.getCitiesCount() * (board.getCitiesCount()-1) * (board.getCitiesCount() + board.getNumberOfEpidemicCards()));
 					}
 				}
-				return sum;
+				return (double)sum;
 			}
 			
 			/**
@@ -820,6 +855,7 @@ public class Client
 				}
 				return uncuredDeseases;
 			}
+
 		}
 
 		// Class Variables
@@ -837,10 +873,12 @@ public class Client
 		}
 		
 		// Other Methods
-		String findNextMove(Board board) {
+		State findNextMove(Board board, int numOfActions) {
 			System.out.println("FIND NEXT MOVE STARTED.");
 			Tree tree = new Tree();
 			tree.root.state.board = board;
+			tree.root.state.playerPlaying = board.getWhoIsPlaying();
+			tree.root.state.numberOfActions = numOfActions;
 
 			// Time-based termination loop
 			long currentTime = System.currentTimeMillis();
@@ -872,7 +910,7 @@ public class Client
 					maxValue = tempState.value;
 				}
 			}
-			return maxState.myAction;
+			return maxState;
 		}
 
 		Node selectNode(Node rootNode) {
@@ -896,7 +934,7 @@ public class Client
 
 		double ucbValue(int parentVisits, double value, int childVisits) {
 			if (childVisits == 0) return Integer.MAX_VALUE;
-			return ((value / (double) childVisits) + 2 * Math.sqrt(Math.log(parentVisits) / (double) childVisits));
+			return (( 1 / (value * (double) childVisits)) + 2 * Math.sqrt(Math.log(parentVisits) / (double) childVisits));
 		}
 
 		void expandNode(Node node) {
@@ -949,7 +987,8 @@ public class Client
 			}
 			boolean changedPlayer = false;
 			State newState = tempState;
-			
+			int firstPlayer = tempState.playerPlaying;
+
 			while (!(newState.playerPlaying == tempState.playerPlaying && changedPlayer)) {
 				List<State> possibleStates = newState.getAllPossibleStates();
 				Random rand = new Random();
@@ -961,7 +1000,7 @@ public class Client
 				
 				if (myBoard.checkIfWon()) break;
 
-				if(newState.numberOfActions == 4) {
+				if(newState.playerPlaying != firstPlayer) {
 					changedPlayer = true;
 				}
 				// if (myBoard.getWhoIsPlaying() == numberOfPlayers - 1) 
