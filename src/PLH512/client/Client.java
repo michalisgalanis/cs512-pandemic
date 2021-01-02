@@ -721,15 +721,16 @@ public class Client
 			}
 			
 			public double heuristic(){
-				double weighted_hdsurv = 0.5 * hdsurv();
-				double weighted_hdcure =  0.5 * hdcure();
-				double weighted_hcards = 1 * hcards();
-				double weighted_hdisc = 0.5 * hdisc();
-				double weighted_hinf = 0.6 * hinf();
-				double weighted_hdist = 0.6 * hdist();
-				double weighted_hcures = 24 * hcures();
+				double inverse_transformation = 460;
+				double weighted_hdsurv = inverse_transformation /	(2.5 * hdsurv()	)	;
+				double weighted_hdcure = inverse_transformation /	(1.1 * hdcure()	)	;
+				double weighted_hcards = inverse_transformation /	(4 * hcards()	)	;
+				double weighted_hdisc  = inverse_transformation / 	(0.6 * hdisc()	)	;
+				double weighted_hinf   = inverse_transformation /  	(1.0	* hinf())	;
+				double weighted_hdist  = inverse_transformation / 	(2.5 * hdist()	)	;
+				double weighted_hcures = inverse_transformation /	(22  * hcures()	)	;
 				double weighted_htotal =  weighted_hdsurv + weighted_hdcure + weighted_hcards + weighted_hdisc + weighted_hinf + weighted_hdist + weighted_hcures;
-				return weighted_htotal;	
+				return weighted_htotal;
 			}
 			
 			// public double heuristic(){
@@ -776,15 +777,14 @@ public class Client
 			 * 		missing to discover a cure for each disease color among the players’ hands 
 			 * 		(R being 4 for the Scientist and 5 for every other player).
 			 */
-			public double hcards(){ 
-				int colorSize = 4;
+			public double hcards(){
 				int sumCards = 0;
-				for(int i = 0; i < colorSize; i++){
+				for(int i = 0; i < 4; i++){ // for each color
 					int active = board.getCured(i) ? 0 : 1 ; // active cures
 					
-					ArrayList<String> cards;
+					int minCardsMissing = Integer.MAX_VALUE;
 					for (int j = 0; j < numberOfPlayers; j++){
-						cards = board.getHandOf(j);
+						ArrayList<String> cards = board.getHandOf(j);
 						int count = 0; 
 						for(int k = 0; k < cards.size(); k++){
 							if (board.getColors(i).equals(board.searchForCity(cards.get(k)).getColour())) // Count matching color cards
@@ -795,8 +795,10 @@ public class Client
 							cardsNeededForCure = board.getCardsNeededForCure() - 1;
 						else
 							cardsNeededForCure = board.getCardsNeededForCure();
-						sumCards += active * (cardsNeededForCure - count);
+						int cardsMissing = cardsNeededForCure - count;
+						minCardsMissing = Math.min(cardsMissing, minCardsMissing);
 					}
+					sumCards += active * minCardsMissing;
 				}
 				return sumCards;
 			}	
@@ -879,40 +881,41 @@ public class Client
 			tree.root.state.board = board;
 			tree.root.state.playerPlaying = board.getWhoIsPlaying();
 			tree.root.state.numberOfActions = numOfActions;
+			tree.root.state.visitCount = 1; // In order to expand root on 1st iteration
 
 			// Time-based termination loop
 			long currentTime = System.currentTimeMillis();
 			long endTime = currentTime + 3000;
 			//while(System.currentTimeMillis() < endTime){
-			for(int j =0 ;j < 10; j++){
-				/* Phase 1 - Selection */
+			for(int j =0 ;j < 25 ; j++){
+				/* Start from root and find best ucb node until leaf */
 				Node selectedNode = selectNode(tree.root);
-	
-				/* Phase 2 - Expansion */
-				expandNode(selectedNode);
-	
-				/* Phase 3 - Simulation */
-				Node nodeToExplore = selectedNode;
-				if (selectedNode.childArray.size() > 0) 
-					nodeToExplore = selectedNode.getRandomChildNode();
-				
-				double playoutResult = simulateRandomPlayout(nodeToExplore);
-	
-				/* Phase 4 - Update */
-				backPropogation(nodeToExplore, playoutResult);
+			
+				/* Check if expand */
+				if(selectedNode.state.visitCount > 0){	
+					/* Expansion */
+					expandNode(selectedNode);
+		
+					/* Choose random child */
+					selectedNode = selectedNode.getRandomChildNode();
+				}
+				/* Rollout */
+				double playoutResult = simulateRandomPlayout(selectedNode);
+				backPropogation(selectedNode, playoutResult);
 			}
 			/* Select final move */
-			double maxValue = Double.MIN_VALUE;
-			State maxState = tree.root.state;
+			// double maxValue = Double.MIN_VALUE;
+			// State maxState = tree.root.state;
 				/* Returns max value */
-			for (int i = 0; i < tree.root.childArray.size(); i++){
-				State tempState = tree.root.childArray.get(i).state;
-				if (tempState.value > maxValue){
-					maxState = tempState;
-					maxValue = tempState.value;
-				}
-			}
-			return maxState;
+			Node bestNode =findBestNodeWithUCB(tree.root);
+			// for (int i = 0; i < tree.root.childArray.size(); i++){
+			// 	State tempState = tree.root.childArray.get(i).state;
+			// 	if (tempState.value > maxValue){
+			// 		maxState = tempState;
+			// 		maxValue = tempState.value;
+			// 	}
+			// }
+			return bestNode.state;
 		}
 
 		Node selectNode(Node rootNode) {
@@ -928,15 +931,20 @@ public class Client
 			int maxUcbIdx = 0;
 			for (int i = 0; i < node.childArray.size(); i++) {
 				ucbValues[i] = ucbValue(parentVisits, node.childArray.get(i).state.value, node.childArray.get(i).state.visitCount);
-				maxUcbValue = Math.max(maxUcbValue, ucbValues[i]);
-				maxUcbIdx = i;
+				if(ucbValues[i] > maxUcbValue){
+					maxUcbValue = ucbValues[i];
+					maxUcbIdx = i;
+				}
 			}
 			return node.childArray.get(maxUcbIdx);
 		}
 
 		double ucbValue(int parentVisits, double value, int childVisits) {
 			if (childVisits == 0) return Integer.MAX_VALUE;
-			return (( 1 / (value * (double) childVisits)) + 2 * Math.sqrt(Math.log(parentVisits) / (double) childVisits));
+			double firstParam = value / ((double) childVisits);
+			double secondParam =  2 * Math.sqrt(Math.log(parentVisits) / (double) childVisits);
+			return firstParam + secondParam;
+			// return (( value / ((double) childVisits)) + 2 * Math.sqrt(Math.log(parentVisits) / (double) childVisits));
 		}
 
 		void expandNode(Node node) {
@@ -977,7 +985,7 @@ public class Client
 		double simulateRandomPlayout(Node node) {
 			Node tempNode = node;
 			State tempState = tempNode.state;
-			int rolloutNum = 100, totalHeur = 0;
+			int rolloutNum = 15, totalHeur = 0;
 			/* Final State */
 			if (tempState.board.getGameEnded()) {
 				/* Reward Win */
