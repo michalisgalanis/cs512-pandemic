@@ -883,7 +883,8 @@ public class Client
 			// Time-based termination loop
 			long currentTime = System.currentTimeMillis();
 			long endTime = currentTime + 3000;
-			while(System.currentTimeMillis() < endTime){
+			//while(System.currentTimeMillis() < endTime){
+			for(int j =0 ;j < 10; j++){
 				/* Phase 1 - Selection */
 				Node selectedNode = selectNode(tree.root);
 	
@@ -900,9 +901,10 @@ public class Client
 				/* Phase 4 - Update */
 				backPropogation(nodeToExplore, playoutResult);
 			}
-			
+			/* Select final move */
 			double maxValue = Double.MIN_VALUE;
 			State maxState = tree.root.state;
+				/* Returns max value */
 			for (int i = 0; i < tree.root.childArray.size(); i++){
 				State tempState = tree.root.childArray.get(i).state;
 				if (tempState.value > maxValue){
@@ -975,7 +977,7 @@ public class Client
 		double simulateRandomPlayout(Node node) {
 			Node tempNode = node;
 			State tempState = tempNode.state;
-			
+			int rolloutNum = 100, totalHeur = 0;
 			/* Final State */
 			if (tempState.board.getGameEnded()) {
 				/* Reward Win */
@@ -985,33 +987,38 @@ public class Client
 				else
 					return Integer.MIN_VALUE;
 			}
-			boolean changedPlayer = false;
-			State newState = tempState;
-			int firstPlayer = tempState.playerPlaying;
+			for(int i = 0; i < rolloutNum; i++){
+				boolean changedPlayer = false;
+				State newState = tempState;
+				int firstPlayer = tempState.playerPlaying;
+				double tempHeur = 0;
 
-			while (!(newState.playerPlaying == tempState.playerPlaying && changedPlayer)) {
-				List<State> possibleStates = newState.getAllPossibleStates();
-				Random rand = new Random();
-				newState = possibleStates.get(rand.nextInt(possibleStates.size()));
-				
-				// Node newNode = new Node();
-				// newNode.state = newState;
-				Board myBoard = newState.board;
-				
-				if (myBoard.checkIfWon()) break;
+				while (!(newState.playerPlaying == tempState.playerPlaying && changedPlayer)) {
+					List<State> possibleStates = newState.getAllPossibleStates();
+					Random rand = new Random();
+					newState = possibleStates.get(rand.nextInt(possibleStates.size()));
+					
+					// Node newNode = new Node();
+					// newNode.state = newState;
+					Board myBoard = newState.board;
+					
+					if (myBoard.checkIfWon()) break;
 
-				if(newState.playerPlaying != firstPlayer) {
-					changedPlayer = true;
+					if(newState.playerPlaying != firstPlayer) {
+						changedPlayer = true;
+					}
+					// if (myBoard.getWhoIsPlaying() == numberOfPlayers - 1) 
+					// 	// myBoard.setWhoIsPlaying(0);
+					// 	newState.playerPlaying = 0;
+					// 	 // Back to first player
+					// else 
+					// 	newState.playerPlaying++;
+					// 	// myBoard.setWhoIsPlaying(myBoard.getWhoIsPlaying() + 1);
 				}
-				// if (myBoard.getWhoIsPlaying() == numberOfPlayers - 1) 
-				// 	// myBoard.setWhoIsPlaying(0);
-				// 	newState.playerPlaying = 0;
-				// 	 // Back to first player
-				// else 
-				// 	newState.playerPlaying++;
-				// 	// myBoard.setWhoIsPlaying(myBoard.getWhoIsPlaying() + 1);
+				tempHeur = newState.heuristic();
+				totalHeur += tempHeur;
 			}
-			return newState.heuristic();
+			return totalHeur / rolloutNum;
 		}
 	}
 }
