@@ -571,24 +571,27 @@ public class Client
 					childsnumberOfActions++;
 				}
 
+				String myRole = board.getRoleOf(playerPlaying);
 				// Discover a Cure
-				cards_needed_for_cure = (board.getRoleOf(playerPlaying).equals("Scientist")) ? 3 : 4;
+				cards_needed_for_cure = (myRole.equals("Scientist")) ? 3 : 4;
 				String colorToCure = null;
-			
-				for (int i = 0; i < myColorCount.length; i++){
-					if (myColorCount[i] > cards_needed_for_cure){
-						if (i == 0) colorToCure = "Black";
-						else if (i == 1) colorToCure = "Yellow";
-						else if (i == 2) colorToCure = "Blue";
-						else if (i == 3) colorToCure = "Red";
-						myBoard = copyBoard(board);
-						myBoard.cureDisease(childsPlayerPlaying, colorToCure);
-						myState = new State();
-						myState.board = myBoard;
-						myState.myAction =  toTextCureDisease(childsPlayerPlaying, colorToCure);
-						myState.numberOfActions = childsnumberOfActions;
-						myState.playerPlaying = childsPlayerPlaying;
-						possibleStates.add(myState);
+
+				if(!myCurrentCityObj.getHasReseachStation()){
+					for (int i = 0; i < myColorCount.length; i++){
+						if (myColorCount[i] > cards_needed_for_cure){
+							if (i == 0) colorToCure = "Black";
+							else if (i == 1) colorToCure = "Yellow";
+							else if (i == 2) colorToCure = "Blue";
+							else if (i == 3) colorToCure = "Red";
+							myBoard = copyBoard(board);
+							myBoard.cureDisease(childsPlayerPlaying, colorToCure);
+							myState = new State();
+							myState.board = myBoard;
+							myState.myAction =  toTextCureDisease(childsPlayerPlaying, colorToCure);
+							myState.numberOfActions = childsnumberOfActions;
+							myState.playerPlaying = childsPlayerPlaying;
+							possibleStates.add(myState);
+						}
 					}
 				}
 
@@ -674,7 +677,7 @@ public class Client
 					if (myCurrentCity.equals(cards.get(i))){
 						for (int j = 0; j < board.getCitiesCount(); j++){
 							location = board.searchForCity(j).getName();
-							if (location.equals(myCurrentCity)) continue;
+							// if (location.equals(myCurrentCity)) continue;
 							myBoard = copyBoard(board);
 							myBoard.charterFlight(childsPlayerPlaying, location);
 							myState = new State();
@@ -688,13 +691,14 @@ public class Client
 				}
 
 				// Shuttle Flight
-				if (myCurrentCityObj.getHasReseachStation()){
+				if (myCurrentCityObj.getHasReseachStation() || myRole.equals("Operations Expert")){
 					ArrayList<String> locations = board.getRSLocations();
 					for (int i = 0; i < locations.size(); i++){
 						if(myCurrentCity.equals(locations.get(i)))
 							continue;
 						myBoard = copyBoard(board);
-						myBoard.shuttleFlight(childsPlayerPlaying, locations.get(i));
+						boolean isLegal = myBoard.shuttleFlight(childsPlayerPlaying, locations.get(i));
+						if(!isLegal) continue;
 						myState = new State();
 						myState.board = myBoard;
 						myState.myAction = toTextShuttleFlight(childsPlayerPlaying, locations.get(i));
@@ -705,30 +709,43 @@ public class Client
 				}
 
 				// Build a Research Station
-				for (int i = 0; i < cards.size(); i++){
-					if (myCurrentCity.equals(cards.get(i))){
-						myBoard = copyBoard(board);
-						myBoard.buildRS(childsPlayerPlaying, myCurrentCity);
-						myState = new State();
-						myState.board = myBoard;
-						myState.myAction = toTextBuildRS(childsPlayerPlaying, myCurrentCity);
-						myState.numberOfActions = childsnumberOfActions;
-						myState.playerPlaying = childsPlayerPlaying;
-						possibleStates.add(myState);
+				if(myRole.equals("Operations Expert")){
+					myBoard = copyBoard(board);
+					myBoard.buildRS(childsPlayerPlaying, myCurrentCity);
+					myState = new State();
+					myState.board = myBoard;
+					myState.myAction = toTextBuildRS(childsPlayerPlaying, myCurrentCity);
+					myState.numberOfActions = childsnumberOfActions;
+					myState.playerPlaying = childsPlayerPlaying;
+					possibleStates.add(myState);
+				}
+				else{
+					for (int i = 0; i < cards.size(); i++){
+						if (myCurrentCity.equals(cards.get(i))){
+							myBoard = copyBoard(board);
+							myBoard.buildRS(childsPlayerPlaying, myCurrentCity);
+							myState = new State();
+							myState.board = myBoard;
+							myState.myAction = toTextBuildRS(childsPlayerPlaying, myCurrentCity);
+							myState.numberOfActions = childsnumberOfActions;
+							myState.playerPlaying = childsPlayerPlaying;
+							possibleStates.add(myState);
+						}
 					}
 				}
+				
 				return possibleStates;
 			}
 			
 			public double heuristic(){
 				double inverse_transformation = 460;
-				double weighted_hdsurv = inverse_transformation /	(2.5 * hdsurv()	)	;
+				double weighted_hdsurv = inverse_transformation /	(3.5 * hdsurv()	)	;
 				double weighted_hdcure = inverse_transformation /	(1.1 * hdcure()	)	;
-				double weighted_hcards = inverse_transformation /	(4 * hcards()	)	;
+				double weighted_hcards = inverse_transformation /	(2.0 * hcards()	)	;
 				double weighted_hdisc  = inverse_transformation / 	(0.6 * hdisc()	)	;
-				double weighted_hinf   = inverse_transformation /  	(1.0	* hinf())	;
+				double weighted_hinf   = inverse_transformation /  	(1.0 * hinf()	)	;
 				double weighted_hdist  = inverse_transformation / 	(2.5 * hdist()	)	;
-				double weighted_hcures = inverse_transformation /	(22  * hcures()	)	;
+				double weighted_hcures = inverse_transformation /	(17  * hcures()	)	;
 				double weighted_htotal =  weighted_hdsurv + weighted_hdcure + weighted_hcards + weighted_hdisc + weighted_hinf + weighted_hdist + weighted_hcures;
 				return weighted_htotal;
 			}
@@ -887,7 +904,7 @@ public class Client
 			long currentTime = System.currentTimeMillis();
 			long endTime = currentTime + 3000;
 			//while(System.currentTimeMillis() < endTime){
-			for(int j =0 ;j < 25 ; j++){
+			for(int j =0 ;j < 200 ; j++){
 				/* Start from root and find best ucb node until leaf */
 				Node selectedNode = selectNode(tree.root);
 			
@@ -900,21 +917,13 @@ public class Client
 					selectedNode = selectedNode.getRandomChildNode();
 				}
 				/* Rollout */
-				double playoutResult = simulateRandomPlayout(selectedNode);
+				double playoutResult = selectedNode.state.heuristic();
+				// double playoutResult = simulateRandomPlayout(selectedNode); UNCOMMENT FOR FULL STAGES MCTS
 				backPropogation(selectedNode, playoutResult);
 			}
 			/* Select final move */
-			// double maxValue = Double.MIN_VALUE;
-			// State maxState = tree.root.state;
-				/* Returns max value */
 			Node bestNode =findBestNodeWithUCB(tree.root);
-			// for (int i = 0; i < tree.root.childArray.size(); i++){
-			// 	State tempState = tree.root.childArray.get(i).state;
-			// 	if (tempState.value > maxValue){
-			// 		maxState = tempState;
-			// 		maxValue = tempState.value;
-			// 	}
-			// }
+			
 			return bestNode.state;
 		}
 
@@ -957,19 +966,6 @@ public class Client
 				newNode.state = state;
 				newNode.parent = node;
 				node.childArray.add(newNode);
-	
-				// if (myBoard.checkIfWon()) break;
-
-				// myBoard.drawCards(myBoard.getWhoIsPlaying(), 2);
-				// System.out.println("");
-				
-				// if (!myBoard.getIsQuietNight())
-				// 	myBoard.infectCities(myBoard.getInfectionRate(), 1);
-				// else 
-				// 	myBoard.setIsQuietNight(false);
-				// System.out.println("");
-				
-				// myBoard.resetTalkedForThisTurn();
 			}
 		}
 
@@ -1005,9 +1001,7 @@ public class Client
 					List<State> possibleStates = newState.getAllPossibleStates();
 					Random rand = new Random();
 					newState = possibleStates.get(rand.nextInt(possibleStates.size()));
-					
-					// Node newNode = new Node();
-					// newNode.state = newState;
+				
 					Board myBoard = newState.board;
 					
 					if (myBoard.checkIfWon()) break;
@@ -1015,13 +1009,7 @@ public class Client
 					if(newState.playerPlaying != firstPlayer) {
 						changedPlayer = true;
 					}
-					// if (myBoard.getWhoIsPlaying() == numberOfPlayers - 1) 
-					// 	// myBoard.setWhoIsPlaying(0);
-					// 	newState.playerPlaying = 0;
-					// 	 // Back to first player
-					// else 
-					// 	newState.playerPlaying++;
-					// 	// myBoard.setWhoIsPlaying(myBoard.getWhoIsPlaying() + 1);
+
 				}
 				tempHeur = newState.heuristic();
 				totalHeur += tempHeur;
