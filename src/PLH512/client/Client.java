@@ -709,7 +709,7 @@ public class Client
 				}
 
 				// Build a Research Station
-				if(myRole.equals("Operations Expert") && !(myCurrentCityObj.getHasReseachStation())){
+				if(myRole.equals("Operations Expert")){
 					myBoard = copyBoard(board);
 					myBoard.buildRS(childsPlayerPlaying, myCurrentCity);
 					myState = new State();
@@ -722,16 +722,14 @@ public class Client
 				else{
 					for (int i = 0; i < cards.size(); i++){
 						if (myCurrentCity.equals(cards.get(i))){
-							if(!(myCurrentCityObj.getHasReseachStation())){
-								myBoard = copyBoard(board);
-								myBoard.buildRS(childsPlayerPlaying, myCurrentCity);
-								myState = new State();
-								myState.board = myBoard;
-								myState.myAction = toTextBuildRS(childsPlayerPlaying, myCurrentCity);
-								myState.numberOfActions = childsnumberOfActions;
-								myState.playerPlaying = childsPlayerPlaying;
-								possibleStates.add(myState);
-							}
+							myBoard = copyBoard(board);
+							myBoard.buildRS(childsPlayerPlaying, myCurrentCity);
+							myState = new State();
+							myState.board = myBoard;
+							myState.myAction = toTextBuildRS(childsPlayerPlaying, myCurrentCity);
+							myState.numberOfActions = childsnumberOfActions;
+							myState.playerPlaying = childsPlayerPlaying;
+							possibleStates.add(myState);
 						}
 					}
 				}
