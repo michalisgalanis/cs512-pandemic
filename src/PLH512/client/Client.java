@@ -671,24 +671,24 @@ public class Client
 					possibleStates.add(myState);
 				}
 
-				// // Charter Flight
-				// String location = "";
-				// for (int i = 0; i < cards.size(); i++){
-				// 	if (myCurrentCity.equals(cards.get(i))){
-				// 		for (int j = 0; j < board.getCitiesCount(); j++){
-				// 			location = board.searchForCity(j).getName();
-				// 			// if (location.equals(myCurrentCity)) continue;
-				// 			myBoard = copyBoard(board);
-				// 			myBoard.charterFlight(childsPlayerPlaying, location);
-				// 			myState = new State();
-				// 			myState.board = myBoard;
-				// 			myState.myAction = toTextCharterFlight(childsPlayerPlaying, location);
-				// 			myState.numberOfActions = childsnumberOfActions;
-				// 			myState.playerPlaying = childsPlayerPlaying;
-				// 			possibleStates.add(myState);
-				// 		}
-				// 	}
-				// }
+				// Charter Flight
+				String location = "";
+				for (int i = 0; i < cards.size(); i++){
+					if (myCurrentCity.equals(cards.get(i))){
+						for (int j = 0; j < board.getCitiesCount(); j++){
+							location = board.searchForCity(j).getName();
+							// if (location.equals(myCurrentCity)) continue;
+							myBoard = copyBoard(board);
+							myBoard.charterFlight(childsPlayerPlaying, location);
+							myState = new State();
+							myState.board = myBoard;
+							myState.myAction = toTextCharterFlight(childsPlayerPlaying, location);
+							myState.numberOfActions = childsnumberOfActions;
+							myState.playerPlaying = childsPlayerPlaying;
+							possibleStates.add(myState);
+						}
+					}
+				}
 
 				// Shuttle Flight
 				if (myCurrentCityObj.getHasReseachStation() || myRole.equals("Operations Expert")){
@@ -709,7 +709,7 @@ public class Client
 				}
 
 				// Build a Research Station
-				if(myRole.equals("Operations Expert")){
+				if(myRole.equals("Operations Expert") && !(myCurrentCityObj.getHasReseachStation())){
 					myBoard = copyBoard(board);
 					myBoard.buildRS(childsPlayerPlaying, myCurrentCity);
 					myState = new State();
@@ -722,14 +722,16 @@ public class Client
 				else{
 					for (int i = 0; i < cards.size(); i++){
 						if (myCurrentCity.equals(cards.get(i))){
-							myBoard = copyBoard(board);
-							myBoard.buildRS(childsPlayerPlaying, myCurrentCity);
-							myState = new State();
-							myState.board = myBoard;
-							myState.myAction = toTextBuildRS(childsPlayerPlaying, myCurrentCity);
-							myState.numberOfActions = childsnumberOfActions;
-							myState.playerPlaying = childsPlayerPlaying;
-							possibleStates.add(myState);
+							if(!(myCurrentCityObj.getHasReseachStation())){
+								myBoard = copyBoard(board);
+								myBoard.buildRS(childsPlayerPlaying, myCurrentCity);
+								myState = new State();
+								myState.board = myBoard;
+								myState.myAction = toTextBuildRS(childsPlayerPlaying, myCurrentCity);
+								myState.numberOfActions = childsnumberOfActions;
+								myState.playerPlaying = childsPlayerPlaying;
+								possibleStates.add(myState);
+							}
 						}
 					}
 				}
@@ -740,12 +742,12 @@ public class Client
 			public double heuristic(){
 				double inverse_transformation = 460;
 				double weighted_hdsurv = inverse_transformation /	(3.5 * hdsurv()	)	;
-				double weighted_hdcure = inverse_transformation /	(1.1 * hdcure()	)	; // 1.1
-				double weighted_hcards = inverse_transformation /	(2.0 * hcards()	)	; //2
-				double weighted_hdisc  = inverse_transformation / 	(30.0 * hdisc()	)	; //0.6
+				double weighted_hdcure = inverse_transformation /	(1.1 * hdcure()	)	;
+				double weighted_hcards = inverse_transformation /	(2.0 * hcards()	)	;
+				double weighted_hdisc  = inverse_transformation / 	(0.6 * hdisc()	)	;
 				double weighted_hinf   = inverse_transformation /  	(1.0 * hinf()	)	;
-				double weighted_hdist  = inverse_transformation / 	(2.5 * hdist()	)	;  //2.5
-				double weighted_hcures = inverse_transformation /	(17.0  * hcures()	)	; //17
+				double weighted_hdist  = inverse_transformation / 	(2.5 * hdist()	)	;
+				double weighted_hcures = inverse_transformation /	(17  * hcures()	)	;
 				double weighted_htotal =  weighted_hdsurv + weighted_hdcure + weighted_hcards + weighted_hdisc + weighted_hinf + weighted_hdist + weighted_hcures;
 				return weighted_htotal;
 			}
@@ -922,19 +924,9 @@ public class Client
 				backPropogation(selectedNode, playoutResult);
 			}
 			/* Select final move */
-			double maxValue = Integer.MIN_VALUE, averageValue = 0;
-			Node rootNode = tree.root;
-			int idx = 0;
-			for (int i = 0; i < rootNode.childArray.size(); i++) {
-				averageValue = rootNode.childArray.get(i).state.value / rootNode.childArray.get(i).state.visitCount;
-				if(averageValue > maxValue){
-					maxValue = averageValue;
-					idx = i;
-				}
-			}
-		
-			return rootNode.childArray.get(idx).state;
-
+			Node bestNode =findBestNodeWithUCB(tree.root);
+			
+			return bestNode.state;
 		}
 
 		Node selectNode(Node rootNode) {
@@ -961,7 +953,7 @@ public class Client
 		double ucbValue(int parentVisits, double value, int childVisits) {
 			if (childVisits == 0) return Integer.MAX_VALUE;
 			double firstParam = value / ((double) childVisits);
-			double secondParam =  16 * Math.sqrt(Math.log(parentVisits) / (double) childVisits);
+			double secondParam =  2 * Math.sqrt(Math.log(parentVisits) / (double) childVisits);
 			return firstParam + secondParam;
 			// return (( value / ((double) childVisits)) + 2 * Math.sqrt(Math.log(parentVisits) / (double) childVisits));
 		}
