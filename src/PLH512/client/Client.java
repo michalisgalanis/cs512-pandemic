@@ -109,9 +109,6 @@ public class Client
                         	for (int i = 0 ; i < 4 ; i++)
                         		System.out.println(myBoard.getColors(i) + " cards count: " + myColorCount[i]);
                         	
-                        	// Printing out distance map from current city
-                        	//System.out.println("\nDistance map from " + myCurrentCity);
-                        	//printDistanceMap(distanceMap);
                         	
 							// ADD YOUR CODE FROM HERE AND ON!! 
 							Board[] tmpBoards = new Board[4];
@@ -782,7 +779,7 @@ public class Client
 				double weighted_hdsurv = inverse_transformation / (3.5 * hdsurv());
 				double weighted_hdcure = inverse_transformation / (1.1 * hdcure());
 				double weighted_hcards = inverse_transformation / (2.0 * hcards());
-				double weighted_hdisc = inverse_transformation / (0.6 * hdisc());
+				double weighted_hdisc = inverse_transformation / (0.6 * hmiss());
 				double weighted_hinf = inverse_transformation / (1.0 * hinf());
 				double weighted_hdist = inverse_transformation / (2.5 * hdist());
 				double weighted_hcures = inverse_transformation / (17 * hcures());
@@ -791,10 +788,6 @@ public class Client
 				return weighted_htotal;
 			}
 
-			// public double heuristic(){
-			// return 0.5 * hdsurv() + 0.5 * hdcure() + 1 * hcards() * 0.5 * hdisc() + 0.6 *
-			// hinf() + 0.6 * hdist() + 24 * hcures();
-			// }
 
 			/**
 			 * 1. Measures the distance to all the cities times the number of disease cubes
@@ -868,22 +861,14 @@ public class Client
 			}
 
 			/**
-			 * 4. The value of the cards in the discard is calculated, as the sum of the
-			 * number of discarded cards for each of the active diseases still missing a
-			 * cure.
+			 * 4. Calculating missing cards from player's deck
 			 */
-			public double hdisc() { // NEEDS CHECKING
+			public double hmiss() { 
 				// Simpler Approach
-				int discardedPlayerCards = board.getCitiesCount() + board.getNumberOfEpidemicCards()
+				int missingCard = board.getCitiesCount() + board.getNumberOfEpidemicCards()
 						- board.getPlayersDeck().size();
-				return discardedPlayerCards;
+				return missingCard;
 
-				// Alternative Implementation ()
-				/*
-				 * int uncuredDeseases = 0; board.getDiscardedPile() for (int i = 0; i < 4;
-				 * i++){ if (!board.getCured(i)) uncuredDeseases++; } return
-				 * discardedPlayerCards * uncuredDeseases;
-				 */
 			}
 
 			/**
@@ -951,8 +936,8 @@ public class Client
 			tree.root.state.visitCount = 1; // In order to expand root on 1st iteration
 
 			// Time-based termination loop
-			long currentTime = System.currentTimeMillis();
-			long endTime = currentTime + 3000;
+			// long currentTime = System.currentTimeMillis();
+			// long endTime = currentTime + 3000;
 			//while(System.currentTimeMillis() < endTime){
 			for(int j =0 ;j < 300 ; j++){
 				/* Start from root and find best ucb node until leaf */
