@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit;
 import PLH512.client.Client.MCST.State;
 import PLH512.server.Board;
 import PLH512.server.City;
+import PLH512.server.Server;
 
 public class Client  
 {
@@ -61,7 +62,7 @@ public class Client
             public void run() {
             	
             	boolean timeToTalk = false;
-            	
+				int[] profile = {0,0,0,0};
             	//MPOREI NA GINEI WHILE  TRUE ME BREAK GIA SINTHIKI??
                 while (currentBoard[0].getGameEnded() == false) 
                 { 	
@@ -112,8 +113,13 @@ public class Client
                         	//System.out.println("\nDistance map from " + myCurrentCity);
                         	//printDistanceMap(distanceMap);
                         	
-                        	// ADD YOUR CODE FROM HERE AND ON!! 
-							
+							// ADD YOUR CODE FROM HERE AND ON!! 
+							Board[] tmpBoards = new Board[4];
+							if (myBoard.getWhoIsPlaying() == myPlayerID){
+								for(int i = 0; i < numberOfPlayers; i++){
+									tmpBoards[i] = copyBoard(myBoard);
+								}
+							}
 							MCST mcst = new MCST(myBoard);
 							State stateMove;
 							for (int i = 0; i < 4; i++){
@@ -122,18 +128,46 @@ public class Client
 								myBoard = stateMove.getBoard();
 								myBoard.setWhoIsPlaying(stateMove.playerPlaying);
 							}
+							
 
                         	// UP TO HERE!! DON'T FORGET TO EDIT THE "msgToSend"
-                        	
+				
                         	// Message type 
                         	// toTextShuttleFlight(0,Atlanta)+"#"+etc
                         	String msgToSend;
-                        	if (myBoard.getWhoIsPlaying() == myPlayerID)
+							if (myBoard.getWhoIsPlaying() == myPlayerID){
+								myBoard.setActions(myAction, myPlayerID);
+								double max = Integer.MIN_VALUE;
+								int idx = 0;
+								for(int i = 0; i < numberOfPlayers; i++){
+									String action = myBoard.getActions(i);
+									State tmpState = new State();
+									Server.readActions(action, tmpBoards[i]);
+									tmpState.board = tmpBoards[i];
+									double score = tmpState.heuristic();
+									
+									double competition = 0;
+									for (int p = 0; p < profile.length; p++){
+										if (p != i) competition += profile[p];
+									}
+									competition /= profile.length - 1;
+
+									double coefficient = 0.0005; // the larger the value, the larger the difference between players
+									double weighted_score = score * (1 + coefficient * (profile[i] - competition));
+									
+									System.out.println("Player: " + i + ", score: " +  score + ", weighted_score: " +  weighted_score);
+									if(weighted_score > max ){
+										max = weighted_score;
+										myAction = action;
+										idx = i;
+									}
+								}
+								profile[idx]++;
                         		msgToSend = myAction;
-                        		
+							}
                         		//msgToSend = "AP,"+myPlayerID+"#AP,"+myPlayerID+"#AP,"+myPlayerID+"#C,"+myPlayerID+",This was my action#AP,"+myPlayerID+"#C,"+myPlayerID+",This should not be printed..";//"Action";
                             else 
-                        		msgToSend = "#C,"+myPlayerID+",This was my recommendation"; //"Recommendation"
+                        		msgToSend = myAction; //"Recommendation"
                         	
                         	// NO EDIT FROM HERE AND ON (EXEPT FUNCTIONS OUTSIDE OF MAIN() OF COURSE)
                         	
@@ -497,7 +531,7 @@ public class Client
 
 		
 		/* Node Subclass */
-		class Node{
+		static class Node{
 			// Class Variables
 			State state;
 			Node parent;
@@ -516,7 +550,7 @@ public class Client
 		}
 
 		/* State Subclass */
-		class State{
+		static class State{
 			// Class Variables
 			Board board;
 			int playerPlaying;
@@ -555,19 +589,19 @@ public class Client
 
 				String myCurrentCity = board.getPawnsLocations(playerPlaying);
 				City myCurrentCityObj = board.searchForCity(myCurrentCity);
-				int[] myColorCount = {0, 0, 0, 0};
-				for (int i = 0 ; i < 4 ; i++) myColorCount[i] =  cardsCounterOfColor(board, playerPlaying, board.getColors(i));
+				int[] myColorCount = { 0, 0, 0, 0 };
+				for (int i = 0; i < 4; i++)
+					myColorCount[i] = cardsCounterOfColor(board, playerPlaying, board.getColors(i));
 				int childsnumberOfActions = numberOfActions;
 				int childsPlayerPlaying = playerPlaying;
-				if(numberOfActions == 4) {
+				if (numberOfActions == 4) {
 					childsnumberOfActions = 0;
 					// changedPlayer = true;
-					if (playerPlaying == numberOfPlayers - 1) 
+					if (playerPlaying == numberOfPlayers - 1)
 						childsPlayerPlaying = 0;
-					else 
+					else
 						childsPlayerPlaying++;
-				}
-				else {
+				} else {
 					childsnumberOfActions++;
 				}
 
@@ -576,18 +610,22 @@ public class Client
 				cards_needed_for_cure = (myRole.equals("Scientist")) ? 3 : 4;
 				String colorToCure = null;
 
-				if(myCurrentCityObj.getHasReseachStation()){
-					for (int i = 0; i < myColorCount.length; i++){
-						if (myColorCount[i] > cards_needed_for_cure){
-							if (i == 0) colorToCure = "Black";
-							else if (i == 1) colorToCure = "Yellow";
-							else if (i == 2) colorToCure = "Blue";
-							else if (i == 3) colorToCure = "Red";
+				if (myCurrentCityObj.getHasReseachStation()) {
+					for (int i = 0; i < myColorCount.length; i++) {
+						if (myColorCount[i] > cards_needed_for_cure) {
+							if (i == 0)
+								colorToCure = "Black";
+							else if (i == 1)
+								colorToCure = "Yellow";
+							else if (i == 2)
+								colorToCure = "Blue";
+							else if (i == 3)
+								colorToCure = "Red";
 							myBoard = copyBoard(board);
 							myBoard.cureDisease(childsPlayerPlaying, colorToCure);
 							myState = new State();
 							myState.board = myBoard;
-							myState.myAction =  toTextCureDisease(childsPlayerPlaying, colorToCure);
+							myState.myAction = toTextCureDisease(childsPlayerPlaying, colorToCure);
 							myState.numberOfActions = childsnumberOfActions;
 							myState.playerPlaying = childsPlayerPlaying;
 							possibleStates.add(myState);
@@ -597,19 +635,19 @@ public class Client
 
 				// Treat disease
 				String colorToTreat = null;
-				if (myCurrentCityObj.getBlackCubes() > 0){
+				if (myCurrentCityObj.getBlackCubes() > 0) {
 					colorToTreat = "Black";
 					myBoard = copyBoard(board);
 					myBoard.treatDisease(childsPlayerPlaying, myCurrentCity, colorToTreat);
 					myState = new State();
 					myState.board = myBoard;
-					myState.myAction =  toTextTreatDisease(childsPlayerPlaying, myCurrentCity, colorToTreat);
+					myState.myAction = toTextTreatDisease(childsPlayerPlaying, myCurrentCity, colorToTreat);
 					myState.numberOfActions = childsnumberOfActions;
 					myState.playerPlaying = childsPlayerPlaying;
 					possibleStates.add(myState);
 				}
 
-				if ( myCurrentCityObj.getYellowCubes() > 0){
+				if (myCurrentCityObj.getYellowCubes() > 0) {
 					colorToTreat = "Yellow";
 					myBoard = copyBoard(board);
 					myBoard.treatDisease(childsPlayerPlaying, myCurrentCity, colorToTreat);
@@ -621,7 +659,7 @@ public class Client
 					possibleStates.add(myState);
 				}
 
-				if (myCurrentCityObj.getBlueCubes() > 0){
+				if (myCurrentCityObj.getBlueCubes() > 0) {
 					colorToTreat = "Blue";
 					myBoard = copyBoard(board);
 					myBoard.treatDisease(childsPlayerPlaying, myCurrentCity, colorToTreat);
@@ -633,7 +671,7 @@ public class Client
 					possibleStates.add(myState);
 				}
 
-				if (myCurrentCityObj.getRedCubes() > 0){
+				if (myCurrentCityObj.getRedCubes() > 0) {
 					colorToTreat = "Red";
 					myBoard = copyBoard(board);
 					myBoard.treatDisease(childsPlayerPlaying, myCurrentCity, colorToTreat);
@@ -646,7 +684,7 @@ public class Client
 				}
 
 				// Drive Ferry
-				for (int i = 0; i < myCurrentCityObj.getNeighboursNumber(); i++){
+				for (int i = 0; i < myCurrentCityObj.getNeighboursNumber(); i++) {
 					String neighboor = myCurrentCityObj.getNeighbour(i);
 					myBoard = copyBoard(board);
 					myBoard.driveTo(childsPlayerPlaying, neighboor);
@@ -660,7 +698,7 @@ public class Client
 
 				// Direct Flight
 				ArrayList<String> cards = board.getHandOf(playerPlaying);
-				for (int i = 0; i < cards.size(); i++){
+				for (int i = 0; i < cards.size(); i++) {
 					myBoard = copyBoard(board);
 					myBoard.directFlight(childsPlayerPlaying, cards.get(i));
 					myState = new State();
@@ -673,9 +711,9 @@ public class Client
 
 				// Charter Flight
 				String location = "";
-				for (int i = 0; i < cards.size(); i++){
-					if (myCurrentCity.equals(cards.get(i))){
-						for (int j = 0; j < board.getCitiesCount(); j++){
+				for (int i = 0; i < cards.size(); i++) {
+					if (myCurrentCity.equals(cards.get(i))) {
+						for (int j = 0; j < board.getCitiesCount(); j++) {
 							location = board.searchForCity(j).getName();
 							// if (location.equals(myCurrentCity)) continue;
 							myBoard = copyBoard(board);
@@ -691,25 +729,26 @@ public class Client
 				}
 
 				// Shuttle Flight
-				if (myCurrentCityObj.getHasReseachStation() || myRole.equals("Operations Expert")){
+				if (myCurrentCityObj.getHasReseachStation() || myRole.equals("Operations Expert")) {
 					ArrayList<String> locations = board.getRSLocations();
-					for (int i = 0; i < locations.size(); i++){
-						if(myCurrentCity.equals(locations.get(i)))
+					for (int i = 0; i < locations.size(); i++) {
+						if (myCurrentCity.equals(locations.get(i)))
 							continue;
 						myBoard = copyBoard(board);
 						boolean isLegal = myBoard.shuttleFlight(childsPlayerPlaying, locations.get(i));
-						if(!isLegal) continue;
+						if (!isLegal)
+							continue;
 						myState = new State();
 						myState.board = myBoard;
 						myState.myAction = toTextShuttleFlight(childsPlayerPlaying, locations.get(i));
 						myState.numberOfActions = childsnumberOfActions;
 						myState.playerPlaying = childsPlayerPlaying;
 						possibleStates.add(myState);
-					}   
+					}
 				}
 
 				// Build a Research Station
-				if(myRole.equals("Operations Expert") && !(myCurrentCityObj.getHasReseachStation())){
+				if (myRole.equals("Operations Expert") && !(myCurrentCityObj.getHasReseachStation())) {
 					myBoard = copyBoard(board);
 					myBoard.buildRS(childsPlayerPlaying, myCurrentCity);
 					myState = new State();
@@ -718,11 +757,10 @@ public class Client
 					myState.numberOfActions = childsnumberOfActions;
 					myState.playerPlaying = childsPlayerPlaying;
 					possibleStates.add(myState);
-				}
-				else{
-					for (int i = 0; i < cards.size(); i++){
-						if (myCurrentCity.equals(cards.get(i))){
-							if(!(myCurrentCityObj.getHasReseachStation())){
+				} else {
+					for (int i = 0; i < cards.size(); i++) {
+						if (myCurrentCity.equals(cards.get(i))) {
+							if (!(myCurrentCityObj.getHasReseachStation())) {
 								myBoard = copyBoard(board);
 								myBoard.buildRS(childsPlayerPlaying, myCurrentCity);
 								myState = new State();
@@ -735,41 +773,45 @@ public class Client
 						}
 					}
 				}
-				
+
 				return possibleStates;
 			}
-			
-			public double heuristic(){
+
+			public double heuristic() {
 				double inverse_transformation = 460;
-				double weighted_hdsurv = inverse_transformation /	(3.5 * hdsurv()	)	;
-				double weighted_hdcure = inverse_transformation /	(1.1 * hdcure()	)	;
-				double weighted_hcards = inverse_transformation /	(2.0 * hcards()	)	;
-				double weighted_hdisc  = inverse_transformation / 	(0.6 * hdisc()	)	;
-				double weighted_hinf   = inverse_transformation /  	(1.0 * hinf()	)	;
-				double weighted_hdist  = inverse_transformation / 	(2.5 * hdist()	)	;
-				double weighted_hcures = inverse_transformation /	(17  * hcures()	)	;
-				double weighted_htotal =  weighted_hdsurv + weighted_hdcure + weighted_hcards + weighted_hdisc + weighted_hinf + weighted_hdist + weighted_hcures;
+				double weighted_hdsurv = inverse_transformation / (3.5 * hdsurv());
+				double weighted_hdcure = inverse_transformation / (1.1 * hdcure());
+				double weighted_hcards = inverse_transformation / (2.0 * hcards());
+				double weighted_hdisc = inverse_transformation / (0.6 * hdisc());
+				double weighted_hinf = inverse_transformation / (1.0 * hinf());
+				double weighted_hdist = inverse_transformation / (2.5 * hdist());
+				double weighted_hcures = inverse_transformation / (17 * hcures());
+				double weighted_htotal = weighted_hdsurv + weighted_hdcure + weighted_hcards + weighted_hdisc
+						+ weighted_hinf + weighted_hdist + weighted_hcures;
 				return weighted_htotal;
 			}
-			
+
 			// public double heuristic(){
-			// 	return 0.5 * hdsurv() + 0.5 * hdcure() + 1 * hcards() * 0.5 * hdisc() + 0.6 * hinf() + 0.6 * hdist() + 24 * hcures();
+			// return 0.5 * hdsurv() + 0.5 * hdcure() + 1 * hcards() * 0.5 * hdisc() + 0.6 *
+			// hinf() + 0.6 * hdist() + 24 * hcures();
 			// }
-	
+
 			/**
-			 *  1.  Measures the distance to all the cities times the number of disease cubes (infection) present
-			 * 		in them, these are then averaged over the total number of disease cubes in the game.
+			 * 1. Measures the distance to all the cities times the number of disease cubes
+			 * (infection) present in them, these are then averaged over the total number of
+			 * disease cubes in the game.
 			 */
-			public double hdsurv(){
+			public double hdsurv() {
 				int sumSurv = 0;
-				for (int i = 0 ; i < numberOfPlayers; i++){
+				for (int i = 0; i < numberOfPlayers; i++) {
 					ArrayList<citiesWithDistancesObj> currentMap = new ArrayList<>();
 					currentMap = buildDistanceMap(board, board.getPawnsLocations(i), currentMap);
 					int sumCubesInCity, sumWeightedInf = 0, sumInf = 0;
 					City city;
-					for (int j = 0; j < currentMap.size(); j++){
+					for (int j = 0; j < currentMap.size(); j++) {
 						city = currentMap.get(j).getCityObj();
-						sumCubesInCity = city.getBlackCubes() + city.getBlueCubes() + city.getRedCubes() + city.getYellowCubes();
+						sumCubesInCity = city.getBlackCubes() + city.getBlueCubes() + city.getRedCubes()
+								+ city.getYellowCubes();
 						sumWeightedInf += currentMap.get(j).getDistance() * sumCubesInCity;
 						sumInf += sumCubesInCity;
 					}
@@ -777,40 +819,43 @@ public class Client
 				}
 				return sumSurv;
 			}
-	
+
 			/**
-			 *  2. 	Calculates the distance to the closest city with a research station in it.
-			 */ 
-			public double hdcure(){
+			 * 2. Calculates the distance to the closest city with a research station in it.
+			 */
+			public double hdcure() {
 				int allDistances = 0;
-				for(int i = 0; i < numberOfPlayers; i++){
+				for (int i = 0; i < numberOfPlayers; i++) {
 					ArrayList<citiesWithDistancesObj> currentMap = new ArrayList<>();
 					currentMap = buildDistanceMap(board, board.getPawnsLocations(i), currentMap);
 					allDistances += distanceFromNearestResearchStation(currentMap);
 				}
 				return allDistances;
 			}
-			
+
 			/**
-			 *  3. 	The value of the players’ hands is calculated, as the minimum number of cards 
-			 * 		missing to discover a cure for each disease color among the players’ hands 
-			 * 		(R being 4 for the Scientist and 5 for every other player).
+			 * 3. The value of the players’ hands is calculated, as the minimum number of
+			 * cards missing to discover a cure for each disease color among the players’
+			 * hands (R being 4 for the Scientist and 5 for every other player).
 			 */
-			public double hcards(){
+			public double hcards() {
 				int sumCards = 0;
-				for(int i = 0; i < 4; i++){ // for each color
-					int active = board.getCured(i) ? 0 : 1 ; // active cures
-					
+				for (int i = 0; i < 4; i++) { // for each color
+					int active = board.getCured(i) ? 0 : 1; // active cures
+
 					int minCardsMissing = Integer.MAX_VALUE;
-					for (int j = 0; j < numberOfPlayers; j++){
+					for (int j = 0; j < numberOfPlayers; j++) {
 						ArrayList<String> cards = board.getHandOf(j);
-						int count = 0; 
-						for(int k = 0; k < cards.size(); k++){
-							if (board.getColors(i).equals(board.searchForCity(cards.get(k)).getColour())) // Count matching color cards
+						int count = 0;
+						for (int k = 0; k < cards.size(); k++) {
+							if (board.getColors(i).equals(board.searchForCity(cards.get(k)).getColour())) // Count
+																											// matching
+																											// color
+																											// cards
 								count++;
 						}
 						int cardsNeededForCure;
-						if(board.getRoleOf(j) == "Scientist")
+						if (board.getRoleOf(j) == "Scientist")
 							cardsNeededForCure = board.getCardsNeededForCure() - 1;
 						else
 							cardsNeededForCure = board.getCardsNeededForCure();
@@ -820,57 +865,60 @@ public class Client
 					sumCards += active * minCardsMissing;
 				}
 				return sumCards;
-			}	
-			
-			/** 
-			 *  4.	The value of the cards in the discard is calculated, as the sum of the number 
-			 *		of discarded cards for each of the active diseases still missing a cure.
+			}
+
+			/**
+			 * 4. The value of the cards in the discard is calculated, as the sum of the
+			 * number of discarded cards for each of the active diseases still missing a
+			 * cure.
 			 */
-			public double hdisc(){ //NEEDS CHECKING
+			public double hdisc() { // NEEDS CHECKING
 				// Simpler Approach
-				int discardedPlayerCards = board.getCitiesCount() + board.getNumberOfEpidemicCards() - board.getPlayersDeck().size();
+				int discardedPlayerCards = board.getCitiesCount() + board.getNumberOfEpidemicCards()
+						- board.getPlayersDeck().size();
 				return discardedPlayerCards;
 
 				// Alternative Implementation ()
-				/* int uncuredDeseases = 0;
-				board.getDiscardedPile()
-				for (int i = 0; i < 4; i++){
-					if (!board.getCured(i))
-						uncuredDeseases++;
-				}
-				return discardedPlayerCards * uncuredDeseases; */
+				/*
+				 * int uncuredDeseases = 0; board.getDiscardedPile() for (int i = 0; i < 4;
+				 * i++){ if (!board.getCured(i)) uncuredDeseases++; } return
+				 * discardedPlayerCards * uncuredDeseases;
+				 */
 			}
-	
+
 			/**
-			 *  5. 	Calculates the total number of infections.
-			 */	
-			public double hinf(){
+			 * 5. Calculates the total number of infections.
+			 */
+			public double hinf() {
 				return totalNumberOfInfections(board);
 			}
-	
+
 			/**
-			 *  6. 	Calculates the average distance required to move from each city to another city
-			 * 		with a linearly decreasing value associated with the number of turns remaining 
-			 * 		(taken from the amount of cards still remaining in the player deck).
+			 * 6. Calculates the average distance required to move from each city to another
+			 * city with a linearly decreasing value associated with the number of turns
+			 * remaining (taken from the amount of cards still remaining in the player
+			 * deck).
 			 */
-			public double hdist(){
+			public double hdist() {
 				float sum = 0;
-				for(int i = 0; i < board.getCitiesCount(); i++){
+				for (int i = 0; i < board.getCitiesCount(); i++) {
 					ArrayList<citiesWithDistancesObj> currentMap = new ArrayList<>();
 					currentMap = buildDistanceMap(board, board.searchForCity(i).getName(), currentMap);
-					for(int j = 0; j < currentMap.size(); j++){
-						sum += (float) (currentMap.get(j).getDistance() * board.getPlayersDeck().size()) / (float) (board.getCitiesCount() * (board.getCitiesCount()-1) * (board.getCitiesCount() + board.getNumberOfEpidemicCards()));
+					for (int j = 0; j < currentMap.size(); j++) {
+						sum += (float) (currentMap.get(j).getDistance() * board.getPlayersDeck().size())
+								/ (float) (board.getCitiesCount() * (board.getCitiesCount() - 1)
+										* (board.getCitiesCount() + board.getNumberOfEpidemicCards()));
 					}
 				}
-				return (double)sum;
+				return (double) sum;
 			}
-			
+
 			/**
-			 *  7. 	Counts the number of active diseases which are still lacking a cure.
+			 * 7. Counts the number of active diseases which are still lacking a cure.
 			 */
-			public double hcures(){
+			public double hcures() {
 				int uncuredDeseases = 0;
-				for (int i = 0; i < 4; i++){
+				for (int i = 0; i < 4; i++) {
 					if (!board.getCured(i))
 						uncuredDeseases++;
 				}
@@ -880,7 +928,7 @@ public class Client
 		}
 
 		// Class Variables
-		int numberOfPlayers;
+		static int numberOfPlayers;
 		
 		// Constructor
 		public MCST(Board board){
@@ -906,7 +954,7 @@ public class Client
 			long currentTime = System.currentTimeMillis();
 			long endTime = currentTime + 3000;
 			//while(System.currentTimeMillis() < endTime){
-			for(int j =0 ;j < 200 ; j++){
+			for(int j =0 ;j < 300 ; j++){
 				/* Start from root and find best ucb node until leaf */
 				Node selectedNode = selectNode(tree.root);
 			
