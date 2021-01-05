@@ -131,7 +131,7 @@ public class Client
 				
                         	// Message type 
                         	// toTextShuttleFlight(0,Atlanta)+"#"+etc
-                        	String msgToSend;
+                        	String msgToSend = "";
 							if (myBoard.getWhoIsPlaying() == myPlayerID){
 								myBoard.setActions(myAction, myPlayerID);
 								double max = Integer.MIN_VALUE;
@@ -171,8 +171,8 @@ public class Client
                         	// Writing to Server
                         	dos.flush();
                         	dos.reset();
-                        	if (msgToSend != "")
-                        		msgToSend = msgToSend.substring(1); // Removing the initial delimeter
+                        	// if (msgToSend != "") // Removed cause it deleted letter "D" from direct flight
+                        	// 	msgToSend = msgToSend.substring(1); // Removing the initial delimeter
                         	dos.writeObject(msgToSend);
                         	System.out.println(myUsername + " : I've just sent my " + msgToSend);
                         	currentBoard[0].setTalkedForThisTurn(true, myPlayerID);
